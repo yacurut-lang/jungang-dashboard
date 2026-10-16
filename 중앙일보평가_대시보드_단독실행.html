@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>중앙일보평가 대시보드</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap">
+<style>
+/* Layout: green masthead + 4-column indicator cards (3 bars each), extra budget-linked items below, base-value panel at the end. */
+:root{
+  --bg:#eef2ef; --surface:#ffffff; --ink:#18261e; --muted:#5d6b63; --line:#d3ddd6;
+  --brand:#006b38; --brand2:#00894a; --on-brand:#ffffff;
+  --b-res:#ff9800; --b-cur:#00703c; --b-tgt:#3d5fd6; --b-ir:#8e44ad;
+  --r0:#c62828; --r1:#e57373; --r2:#c0a60f; --r3:#22b35a; --r4:#0a4d2a;
+  --warn-bg:#ffe3e3; --warn-fg:#a11a1a; --ok-bg:#e6f3ea; --ok-fg:#1b6b3a; --input-bg:#fff8df; --input-fg:#1a3fb5;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0e1712; --surface:#17241c; --ink:#e5efe8; --muted:#9db0a4; --line:#2a3c31;
+  --brand:#0b5a33; --brand2:#0f7a43; --warn-bg:#4a1d1d; --warn-fg:#ffb3b3; --ok-bg:#163a25; --ok-fg:#9fe0b4; --input-bg:#3a3414; --input-fg:#a9c0ff; --b-cur:#27a35e; --b-tgt:#6f8cf0; --b-ir:#c08be0;
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0e1712; --surface:#17241c; --ink:#e5efe8; --muted:#9db0a4; --line:#2a3c31;
+  --brand:#0b5a33; --brand2:#0f7a43; --warn-bg:#4a1d1d; --warn-fg:#ffb3b3; --ok-bg:#163a25; --ok-fg:#9fe0b4; --input-bg:#3a3414; --input-fg:#a9c0ff; --b-cur:#27a35e; --b-tgt:#6f8cf0; --b-ir:#c08be0;
+  color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:"Noto Sans KR","Malgun Gothic","Apple SD Gothic Neo",sans-serif;font-size:14px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:16px 40px}
+.wrap{max-width:1500px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+.mast{background:linear-gradient(95deg,var(--brand),var(--brand2));color:var(--on-brand);border-radius:14px;padding:16px 20px;display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between;align-items:center}
+.mast h1{margin:0;font-size:clamp(17px,2.4vw,24px);font-weight:900;letter-spacing:-.01em;text-wrap:balance}
+.mast .sub{margin-top:6px;font-size:12px;opacity:.9}
+.tools{display:flex;flex-direction:column;gap:8px;min-width:0;flex:1 1 320px;max-width:520px}
+.legend{display:flex;border-radius:4px;overflow:hidden;font-size:11px;font-weight:700}
+.legend span{flex:1;text-align:center;padding:3px 0;color:#fff}
+.drop{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:rgba(255,255,255,.14);border:1px dashed rgba(255,255,255,.6);border-radius:8px;padding:8px 10px;font-size:12px}
+.drop.over{background:rgba(255,255,255,.3)}
+.btn{background:#fff;color:#0a4d2a;border:0;border-radius:6px;padding:6px 12px;font:700 12px inherit;font-family:inherit;cursor:pointer}
+.btn:focus-visible,input:focus-visible,summary:focus-visible{outline:3px solid #ffd54a;outline-offset:2px}
+.btn.alt{background:transparent;color:var(--ink);border:1px solid var(--line)}
+#st{min-width:0;overflow-wrap:anywhere}
+.strip{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 14px;font-size:13px}
+.strip b{font-weight:900}
+.pill{display:inline-block;border-radius:999px;padding:1px 9px;font-weight:700;font-size:12px}
+.pill.w{background:var(--warn-bg);color:var(--warn-fg)}.pill.o{background:var(--ok-bg);color:var(--ok-fg)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,330px),1fr));gap:14px}
+.card{background:var(--surface);border:2px solid var(--brand);border-radius:10px;padding:10px 12px 12px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.card h3{margin:0;text-align:center;font-size:16px;font-weight:700;text-wrap:balance}
+.ach{display:flex;justify-content:space-between;align-items:center;border-radius:4px;color:#fff;font-weight:900;padding:5px 10px;font-size:14px}
+.ach .pt{background:rgba(255,255,255,.28);border-radius:3px;padding:0 6px;font-size:11px}
+.chart{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;height:150px;align-items:end;border-bottom:1px solid var(--line);padding:0 8px}
+.col{display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%;min-width:0}
+.col .v{font-size:11px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+.col .bar{width:62%;max-width:52px;border-radius:2px 2px 0 0;min-height:2px;margin-top:2px}
+.labs small{display:block;font-size:10px;color:var(--brand);font-weight:700}
+.chart.c4,.labs.c4{grid-template-columns:repeat(4,1fr);gap:6px}
+.labs small{display:block;font-size:10px;color:var(--brand);font-weight:700}
+.labs small.ir{color:var(--b-ir)}
+.irline{font-size:12px;margin:0;display:flex;justify-content:space-between;gap:8px;border-top:1px solid var(--line);padding-top:6px;font-variant-numeric:tabular-nums}
+table.ir{border-collapse:collapse;width:100%;max-width:520px;font-size:13px}
+table.ir th,table.ir td{border:1px solid var(--line);padding:4px 8px;text-align:left}
+table.ir th{background:var(--brand);color:#fff;text-align:center}
+table.ir td.n{padding:2px 4px}
+.labs{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;font-size:11px;color:var(--muted);text-align:center;padding:0 8px}
+.cmp{display:grid;grid-template-columns:auto 1fr 1fr;gap:3px 8px;font-size:12px;align-items:center;font-variant-numeric:tabular-nums;border-top:1px solid var(--line);padding-top:8px}
+.cmp .h{color:var(--muted);font-size:11px}
+.cmp .r{text-align:right;min-width:0}
+h2.sec{margin:6px 0 0;font-size:15px;font-weight:900}
+.how{font-size:11px;color:var(--muted);margin:0}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:0}
+.panel summary{cursor:pointer;padding:12px 16px;font-weight:700;font-size:14px}
+.panel .in{padding:4px 16px 16px;display:flex;flex-direction:column;gap:12px}
+.fld{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px 16px}
+label.f{display:flex;flex-direction:column;gap:2px;font-size:12px;color:var(--muted)}
+label.f small{font-size:11px}
+input[type=number]{width:100%;font:inherit;font-variant-numeric:tabular-nums;text-align:right;padding:5px 8px;border:1px solid var(--line);border-radius:6px;background:var(--input-bg);color:var(--input-fg)}
+.tw{overflow-x:auto}
+table.ir{border-collapse:collapse;width:100%;min-width:520px;font-size:13px}
+table.ir th,table.ir td{border:1px solid var(--line);padding:4px 8px;text-align:left}
+table.ir th{background:var(--brand);color:#fff;font-weight:700;text-align:center}
+table.ir td.n{padding:2px 4px}
+.notes{font-size:12px;color:var(--muted);display:flex;flex-direction:column;gap:4px;margin:0;padding:0 2px}
+@media (prefers-reduced-motion:no-preference){.bar{transition:height .35s ease}}
+html{color-scheme:light}
+body{margin:0}
+[hidden]{display:none!important}
+</style>
+
+</head>
+<body>
+<div class="wrap">
+ <header class="mast">
+  <div>
+   <h1>2026 중앙일보평가 목표값 대시보드</h1>
+   <div class="sub">예산팀 현황표 연계 · 현황표 자료로 계산되는 지표 7개와 예산 연계 항목 4개 · <span id="basis"></span></div>
+  </div>
+  <div class="tools">
+   <div class="legend" aria-label="달성률 색상 범례"><span style="background:var(--r0)">0~10%</span><span style="background:var(--r1)">10~40%</span><span style="background:var(--r2)">40~70%</span><span style="background:var(--r3)">70~100%</span><span style="background:var(--r4)">100%+ ★</span></div>
+   <div class="drop" id="drop">
+    <button class="btn" id="pick" type="button">현황표 파일 올리기</button>
+    <input id="file" type="file" accept=".xlsx,.xlsm" hidden>
+    <span id="st">내장 값: 현황표 2026.10.1. 기준. 새 파일(xlsx)을 올리거나 끌어다 놓으면 바로 다시 계산합니다.</span>
+   </div>
+  </div>
+ </header>
+
+ <div class="strip" id="strip"></div>
+ <section class="grid" id="grid" aria-label="지표 카드"></section>
+ <h2 class="sec">예산 연계 항목 (비율 지표가 아닌 금액 현황, 천원)</h2>
+ <section class="grid" id="grid2" aria-label="예산 연계 항목"></section>
+
+ <details class="panel" id="p2" open>
+  <summary>IR 목표값 입력 (IR팀 대시보드의 목표 값만 넣습니다. 입력하면 위 막대 그래프에 바로 반영됩니다)</summary>
+  <div class="in"><div class="tw"><table class="ir" id="irt"></table></div>
+   <div><button class="btn alt" id="irreset" type="button">처음 입력값(IR 화면 2026.10.15.)으로 되돌리기</button></div>
+   <p class="how">% 지표는 퍼센트 숫자(예: 20.75)로 입력합니다. 이 칸 외에 IR 값은 이 페이지에서 쓰지 않으며, 입력값은 이 브라우저에만 저장됩니다.</p></div>
+ </details>
+ <details class="panel" id="p1">
+  <summary>기준값 (학생 수와 등록금 분모) 확인·수정</summary>
+  <div class="in">
+   <div class="fld" id="fld"></div>
+   <div><button class="btn alt" id="reset" type="button">파일 값으로 되돌리기</button></div>
+   <p class="how">일반대학원 인원은 현황표에 없어 1,900명으로 두었습니다(3-2.등록금수입의 일반대학원 예산 인원은 2,002명). 평가에 쓰는 인원 기준이 다르면 이 칸을 고치세요. 나머지는 현황표에서 가져옵니다.</p>
+  </div>
+ </details>
+ <p class="notes">
+  <span>2026결과는 25회계 결산, 2026현재는 현황표 기준일 집행액, 목표는 26회계 현 배정액입니다. 달성률 = 2026현재 ÷ 목표이며, 등록금 비율 지표의 2026결과는 25회계 등록금 자료가 현황표에 없어 표시하지 않습니다.</span>
+  <span>2026결과·2026현재·목표(예산팀)는 모두 올려주신 현황표 값입니다. IR 자료는 보라색 IR 목표 값만 사용하며 아래 입력 칸에서 직접 넣습니다. 파일은 이 브라우저 안에서만 읽으며 어디로도 전송되지 않습니다. 필요한 시트: 2.중앙일보평가지표예산, 3-2.등록금수입, 수입(261001).</span>
+  <span>학생 수와 등록금 분모는 현황표의 3-2.등록금수입 시트(예산 인원)와 수입(261001) 시트(등록금수입 계)에서 가져온 추정 기준이며, 위 접이식 칸에서 고칠 수 있습니다.</span>
+ </p>
+</div>
+
+<script>
+(function(){
+'use strict';
+// ---------- built-in snapshot (현황표 2026.10.1.) ----------
+var SNAP={label:'기준일: 2026. 10. 1. (내장 값)',
+ P:{E10:23864959.737,F10:25451511,G10:19735526.082,E12:7531866.725,F12:8233108.62,G12:7163055.292,E22:362341230.89,F22:391263493.65,G22:214268910.2,E26:12804414.657,F26:10457000,G26:4531051.584,E29:3884201.481,F29:3900000,G29:362424.174,E8:9562505,F8:10000000,G8:null,E30:827724,F30:1284000,G30:542413.82,E31:1143460,F31:1200000,G31:619980,E32:140000,F32:140000,G32:0},
+ ug:14309,all:20578,tui:609.6*2,inc:1905.70307};
+SNAP.P.G22=214268910.62;
+var DEF=[
+ {id:'tui',name:'등록금 대비 장학금(%)',pt:4,pct:true,how:'학부 교내장학금 ÷ 학부 내국인 수업료(연 환산)'},
+ {id:'ug',name:'학생 1인당 장학금(학부, 원)',pt:4,how:'학부 교내장학금 ÷ 학부 내국인 인원'},
+ {id:'gr',name:'일반대학원 1인당 교내장학금(원)',pt:2,how:'일반대학원 교내장학금 ÷ 일반대학원 인원'},
+ {id:'edu',name:'등록금 대비 교육비(%)',pt:5,pct:true,how:'교육비 계(교비+산단) ÷ 등록금수입 계'},
+ {id:'pp',name:'학생 1인당 교육비(원)',pt:5,how:'교육비 계(교비+산단) ÷ 전체 인원'},
+ {id:'don',name:'세입 대비 기부금(천원)',pt:5,how:'기부금 계(일반+지정), 천원'},
+ {id:'book',name:'학생당 자료구입비(원)',pt:5,how:'도서구입비 계(산단+교비) ÷ 전체 인원'}];
+var EXTRA=[
+ {row:8,name:'교수당 자체 연구비(교내연구비)',pt:10,how:'2.중앙일보평가지표예산 행8 · 집행액이 현황표에 입력되지 않으면 - 로 표시'},
+ {row:30,name:'외국대학 학점교류(국제화장학금)',pt:10,how:'2.중앙일보평가지표예산 행30'},
+ {row:31,name:'현장실습 참여학생 비율(현장실습장학)',pt:5,how:'2.중앙일보평가지표예산 행31'},
+ {row:32,name:'대외평판도(리서치비용)',pt:30,how:'2.중앙일보평가지표예산 행32'}];
+var IRT0={tui:20.75,ug:1665000,gr:4610526,edu:204.10,pp:19500500,don:12200000,book:180587};
+var irt=JSON.parse(JSON.stringify(IRT0));
+try{var _s=localStorage.getItem('jungang-ir-target'); if(_s){var _o=JSON.parse(_s); if(_o&&_o.tui!=null) irt=_o;}}catch(e){}
+function irVal(d){var x=irt[d.id]; if(x===''||x==null||isNaN(+x)) return null; return d.pct?+x/100:+x;}
+var src=SNAP, inp={};
+var $=function(id){return document.getElementById(id);};
+var nf=new Intl.NumberFormat('ko-KR');
+function fmt(v,pct){ if(v==null||!isFinite(v)) return '-'; return pct?(v*100).toFixed(2)+'%':nf.format(Math.round(v)); }
+function band(r){return r>=1?'var(--r4)':r>=.7?'var(--r3)':r>=.4?'var(--r2)':r>=.1?'var(--r1)':'var(--r0)';}
+// ---------- compute ----------
+function compute(){
+ var P=src.P,k=1000,I=inp;
+ var den1=I.tui*1e8, den2=I.inc*1e8;
+ var v={
+  tui:[null,P.G10*k/den1,P.F10*k/den1],
+  ug:[P.E10*k/I.ug,P.G10*k/I.ug,P.F10*k/I.ug],
+  gr:[P.E12*k/I.gr,P.G12*k/I.gr,P.F12*k/I.gr],
+  edu:[null,P.G22*k/den2,P.F22*k/den2],
+  pp:[P.E22*k/I.all,P.G22*k/I.all,P.F22*k/I.all],
+  don:[P.E26,P.G26,P.F26],
+  book:[P.E29*k/I.all,P.G29*k/I.all,P.F29*k/I.all]};
+ return v;
+}
+// ---------- render ----------
+function bars(d,a,labs,mx){
+ return a.map(function(val,i){
+  var color=['var(--b-res)','var(--b-cur)','var(--b-tgt)','var(--b-ir)'][i];
+  return '<div class="col"><span class="v">'+(val==null?'-':fmt(val,d.pct))+'</span><div class="bar" style="height:'+(val==null?0:Math.max(1,val/mx*100*0.78))+'%;background:'+color+'"></div></div>';
+ }).join('')+'';
+}
+function card(d,a,labs,achLabel,irv){
+ var cur=a[1], tgt=a[2], r=(cur==null||!tgt)?null:cur/tgt;
+ var hasIr=(irv!=null), mx=Math.max(a[0]||0,cur||0,tgt||0,irv||0)||1;
+ var bars4=hasIr?a.concat([irv]):a, labs4=hasIr?labs.concat(['목표<small class="ir">IR팀 · 입력값</small>']):labs;
+ var rIr=(hasIr&&cur!=null&&irv)?cur/irv:null;
+ return '<article class="card"><h3>'+d.name+'</h3>'+
+  '<div class="ach" style="background:'+(r==null?'var(--muted)':band(r))+'"><span>'+(r!=null&&r>=1?'★ ':'')+achLabel+' '+(r==null?'-':(r*100).toFixed(2)+'%')+'</span><span class="pt">'+d.pt+'점</span></div>'+
+  '<div class="chart'+(hasIr?' c4':'')+'">'+bars(d,bars4,labs4,mx)+'</div>'+
+  '<div class="labs'+(hasIr?' c4':'')+'">'+labs4.map(function(x){return '<span>'+x+'</span>';}).join('')+'</div>'+
+  (hasIr?'<p class="irline"><span>IR 목표 기준 달성률</span><b>'+(rIr==null?'-':(rIr*100).toFixed(2)+'%')+'</b></p>':'')+
+  '<p class="how">'+d.how+'</p></article>';
+}
+function render(){
+ var v=compute(), P=src.P, cnt={hi:0,mid:0,lo:0,na:0};
+ var h='';
+ DEF.forEach(function(d){
+  var a=v[d.id], r=a[1]/a[2];
+  if(r>=.7) cnt.hi++; else if(r>=.4) cnt.mid++; else cnt.lo++;
+  h+=card(d,a,['2026결과<small>예산팀 · 25회계 결산</small>','2026현재<small>예산팀 · 10.1. 집행액</small>','목표<small>예산팀 · 26회계 현 배정</small>'],'달성률',irVal(d));
+ });
+ $('grid').innerHTML=h;
+ var h2='';
+ EXTRA.forEach(function(d){
+  var a=[P['E'+d.row],P['G'+d.row],P['F'+d.row]];
+  h2+=card({name:d.name,pt:d.pt,how:d.how,pct:false},[a[0],a[1],a[2]],['25회계 결산<small>예산팀 · 결산</small>','집행(현재)<small>예산팀 · 10.1. 집행액</small>','현 배정<small>예산팀 · 26회계 배정</small>'],'집행률');
+ });
+ $('grid2').innerHTML=h2;
+ $('strip').innerHTML='<span>현황표 기준: <b>'+src.label+'</b></span><span>달성률 70% 이상 <span class="pill o">'+cnt.hi+'개</span></span><span>40~70% <span class="pill" style="background:var(--r2);color:#fff">'+cnt.mid+'개</span></span><span>40% 미만 <span class="pill w">'+cnt.lo+'개</span></span>';
+ $('basis').textContent=src.label;
+}
+function buildIRT(){
+ var t='<tr><th>지표</th><th>IR 목표</th></tr>';
+ DEF.forEach(function(d){t+='<tr><td>'+d.name+'</td><td class="n"><input type="number" step="any" data-id="'+d.id+'" id="irt-'+d.id+'" value="'+irt[d.id]+'" aria-label="'+d.name+' IR 목표"></td></tr>';});
+ $('irt').innerHTML=t;
+}
+function buildInputs(){
+ var items=[['ug','학부 내국인 인원(명)','3-2.등록금수입 예산 인원'],['all','전체 인원(명)','학부+일반+특수대학원'],['gr','일반대학원 인원(명)','현황표에 없어 직접 입력'],['tui','학부 내국인 수업료(억원, 연 환산)','1학기 ×2'],['inc','등록금수입 계(억원)','수입(261001) 행98~104']];
+ $('fld').innerHTML=items.map(function(t){return '<label class="f" for="in-'+t[0]+'">'+t[1]+'<input type="number" step="any" id="in-'+t[0]+'" value="'+inp[t[0]]+'"><small>'+t[2]+'</small></label>';}).join('');
+ items.forEach(function(t){$('in-'+t[0]).addEventListener('input',function(e){var x=parseFloat(e.target.value); if(isFinite(x)&&x>0){inp[t[0]]=x;render();}});});
+}
+function setInp(){inp={ug:src.ug,all:src.all,gr:1900,tui:src.tui,inc:src.inc};}
+// ---------- xlsx reader (no library) ----------
+function u16(d,o){return d[o]|(d[o+1]<<8);} function u32(d,o){return (d[o]|(d[o+1]<<8)|(d[o+2]<<16)|(d[o+3]<<24))>>>0;}
+async function inflate(raw){var ds=new DecompressionStream('deflate-raw'); var w=ds.writable.getWriter(); w.write(raw); w.close(); return new Uint8Array(await new Response(ds.readable).arrayBuffer());}
+function readZip(buf){
+ var d=new Uint8Array(buf), e=d.length-22, ent={};
+ while(e>=0&&u32(d,e)!==0x06054b50) e--;
+ if(e<0) throw new Error('xlsx 형식이 아닙니다.');
+ var n=u16(d,e+10), p=u32(d,e+16), dec=new TextDecoder('utf-8');
+ for(var i=0;i<n;i++){
+  if(u32(d,p)!==0x02014b50) break;
+  var meth=u16(d,p+10), csz=u32(d,p+20), nl=u16(d,p+28), el=u16(d,p+30), cl=u16(d,p+32), off=u32(d,p+42);
+  var name=dec.decode(d.subarray(p+46,p+46+nl));
+  ent[name]={meth:meth,csz:csz,off:off}; p+=46+nl+el+cl;
+ }
+ return {d:d,ent:ent,async get(name){
+  var x=this.ent[name]; if(!x) return null;
+  var o=x.off, nl2=u16(this.d,o+26), el2=u16(this.d,o+28), st=o+30+nl2+el2, raw=this.d.subarray(st,st+x.csz);
+  var out=x.meth===0?raw:await inflate(raw); return dec.decode(out);
+ }};
+}
+function unesc(s){return s.replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&apos;/g,"'").replace(/&amp;/g,'&');}
+async function sheetPaths(z){
+ var wb=await z.get('xl/workbook.xml'), rel=await z.get('xl/_rels/workbook.xml.rels'), map={}, rm={};
+ rel.replace(/<Relationship\b[^>]*>/g,function(m){var id=/Id="([^"]*)"/.exec(m),t=/Target="([^"]*)"/.exec(m); if(id&&t) rm[id[1]]=t[1];});
+ wb.replace(/<sheet\b[^>]*>/g,function(m){var n=/name="([^"]*)"/.exec(m),r=/r:id="([^"]*)"/.exec(m); if(n&&r&&rm[r[1]]){var t=rm[r[1]]; map[unesc(n[1])]=t.charAt(0)==='/'?t.slice(1):'xl/'+t;}});
+ return map;
+}
+function cell(xml,addr){
+ var m=new RegExp('<c r="'+addr+'"([^>]*?)(?:/>|>([\\s\\S]*?)</c>)').exec(xml); if(!m||!m[2]) return null;
+ var t=/\bt="([^"]*)"/.exec(m[1]); if(t&&t[1]!=='n') return {t:t[1],raw:m[2]};
+ var v=/<v>([^<]*)<\/v>/.exec(m[2]); return v?{t:'n',v:parseFloat(v[1])}:null;
+}
+function opt(xml,addr){var c=cell(xml,addr); return (c&&c.t==='n'&&isFinite(c.v))?c.v:null;}
+function num(xml,addr,name){var c=cell(xml,addr); if(!c||c.t!=='n'||!isFinite(c.v)) throw new Error(name+' '+addr+' 값을 읽지 못했습니다. 저장된 계산값이 없는 파일이면 엑셀에서 한 번 저장한 뒤 올려 주세요.'); return c.v;}
+async function readWorkbook(buf,fname){
+ var z=readZip(buf), map=await sheetPaths(z);
+ var NP='2.중앙일보평가지표예산', NT='3-2.등록금수입', NI='수입(261001)';
+ [NP,NT,NI].forEach(function(n){if(!map[n]) throw new Error('"'+n+'" 시트를 찾지 못했습니다.');});
+ var xp=await z.get(map[NP]), xt=await z.get(map[NT]), xi=await z.get(map[NI]);
+ var P={}; ['E10','F10','G10','E12','F12','G12','E22','F22','G22','E26','F26','G26','E29','F29','G29'].forEach(function(a){P[a]=num(xp,a,NP);});
+ ['E8','F8','G8','E30','F30','G30','E31','F31','G31','E32','F32','G32'].forEach(function(a){P[a]=opt(xp,a);});
+ var inc=0; for(var r=98;r<=104;r++) inc+=num(xi,'M'+r,NI);
+ var label=fname;
+ var a5=cell(xp,'A5');
+ if(a5&&a5.t==='s'){
+  var vv=/<v>(\d+)<\/v>/.exec(a5.raw), ss=await z.get('xl/sharedStrings.xml');
+  if(vv&&ss){var items=ss.split(/<si[ >]/); var it=items[+vv[1]+1]; if(it){var tx=[]; it.replace(/<t[^>]*>([^<]*)<\/t>/g,function(m,g){tx.push(unesc(g));}); label=tx.join('').replace(/[()]/g,'').trim()+' · '+fname;}}
+ }
+ return {label:label,P:P,ug:num(xt,'C11',NT),all:num(xt,'C22',NT),tui:num(xt,'D11',NT)*2,inc:inc/1e8};
+}
+async function load(file){
+ var st=$('st'); st.textContent='읽는 중… '+file.name;
+ try{
+  var buf=await file.arrayBuffer(); var s=await readWorkbook(buf,file.name);
+  src=s; setInp(); buildInputs(); render();
+  st.textContent='불러왔습니다: '+file.name;
+ }catch(e){ st.textContent='불러오지 못했습니다. '+(e&&e.message?e.message:e); }
+}
+// ---------- wire ----------
+$('pick').addEventListener('click',function(){$('file').click();});
+$('file').addEventListener('change',function(e){if(e.target.files[0]) load(e.target.files[0]); e.target.value='';});
+var dz=$('drop');
+['dragenter','dragover'].forEach(function(ev){dz.addEventListener(ev,function(e){e.preventDefault();dz.classList.add('over');});});
+['dragleave','drop'].forEach(function(ev){dz.addEventListener(ev,function(e){e.preventDefault();dz.classList.remove('over');});});
+dz.addEventListener('drop',function(e){var f=e.dataTransfer&&e.dataTransfer.files[0]; if(f) load(f);});
+$('irt').addEventListener('input',function(e){var el=e.target; if(!el.dataset||!el.dataset.id) return; irt[el.dataset.id]=el.value===''?'':parseFloat(el.value); try{localStorage.setItem('jungang-ir-target',JSON.stringify(irt));}catch(x){} render();});
+$('irreset').addEventListener('click',function(){irt=JSON.parse(JSON.stringify(IRT0));try{localStorage.removeItem('jungang-ir-target');}catch(e){} buildIRT();render();});
+$('reset').addEventListener('click',function(){setInp();buildInputs();render();});
+setInp(); buildInputs(); buildIRT(); render();
+})();
+</script>
+</body>
+</html>
